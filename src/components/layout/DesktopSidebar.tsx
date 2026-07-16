@@ -1,4 +1,5 @@
 import { ChefHat } from "lucide-react";
+import { appPath, getAppPath } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 import type { AppRoute } from "./AppShell";
 
@@ -7,12 +8,12 @@ type DesktopSidebarProps = {
 };
 
 export function DesktopSidebar({ routes }: DesktopSidebarProps) {
-  const pathname = window.location.pathname;
+  const pathname = getAppPath(window.location.pathname);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-sidebar text-sidebar-foreground md:block">
       <div className="flex h-full flex-col">
-        <a href="/" className="flex h-20 items-center gap-3 border-b px-5">
+        <a href={appPath("/")} className="flex h-20 items-center gap-3 border-b px-5">
           <span className="flex size-11 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
             <ChefHat className="size-5" aria-hidden="true" />
           </span>
@@ -29,7 +30,7 @@ export function DesktopSidebar({ routes }: DesktopSidebarProps) {
             return (
               <a
                 key={route.path}
-                href={route.path}
+                href={appPath(route.path)}
                 className={cn(
                   "flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
                   active

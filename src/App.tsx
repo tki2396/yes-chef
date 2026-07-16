@@ -4,6 +4,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { EmptyState } from "./components/layout/EmptyState";
 import { PageHeader } from "./components/layout/PageHeader";
 import { Section } from "./components/layout/Section";
+import { appPath, getAppPath } from "./lib/routing";
 
 const routes = [
   {
@@ -34,6 +35,8 @@ const routes = [
 ];
 
 function getRoute(pathname: string) {
+  pathname = getAppPath(pathname);
+
   if (pathname === "/recipes/new") return "new-recipe";
   if (pathname.startsWith("/recipes/") && pathname !== "/recipes") return "recipe-detail";
   if (pathname === "/recipes") return "recipes";
@@ -50,7 +53,7 @@ function HomePage() {
         kicker="Mobile-first foundation"
         title="Yes, Chef"
         description="A responsive recipe workspace for capture, imports, iteration, and cooking notes."
-        action={{ label: "Log recipe", href: "/recipes/new" }}
+        action={{ label: "Log recipe", href: appPath("/recipes/new") }}
       />
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Section title="Next foundation slice" description="Build the core recipe primitives before deeper feature work.">
@@ -79,13 +82,13 @@ function RecipesPage() {
         kicker="Library"
         title="Recipe Library"
         description="Your saved recipes, imports, and future versions will live here."
-        action={{ label: "New recipe", href: "/recipes/new" }}
+        action={{ label: "New recipe", href: appPath("/recipes/new") }}
       />
       <EmptyState
         icon={BookOpen}
         title="No recipes yet"
         description="Start with a rough note, a polished recipe, or an import. The foundation supports incomplete recipes from the beginning."
-        action={{ label: "Log first recipe", href: "/recipes/new" }}
+        action={{ label: "Log first recipe", href: appPath("/recipes/new") }}
       />
     </>
   );
