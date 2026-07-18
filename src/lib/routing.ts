@@ -1,4 +1,4 @@
-const rawBasePath = process.env.PUBLIC_BASE_PATH ?? "";
+const rawBasePath = typeof process === "undefined" ? "" : (process.env.PUBLIC_BASE_PATH ?? "");
 
 export const basePath = normalizeBasePath(rawBasePath);
 
