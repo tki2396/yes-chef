@@ -16,6 +16,9 @@ This document captures early implementation decisions for the foundation ticket.
 - Mock recipe primitives live in `src/types/recipe.ts`.
 - Mock data lives in `src/data/mockRecipes.ts`.
 - The library and detail pages are now wired to these primitives without backend persistence.
+- Page modules live in `src/pages`.
+- Route matching is centralized in `src/routes.tsx`.
+- Create/log and import/review scaffolds exist as static frontend surfaces.
 
 ## Out Of Scope For This Slice
 
