@@ -8,6 +8,7 @@ type RecipeListItemProps = {
 
 export function RecipeListItem({ recipe }: RecipeListItemProps) {
   const latestVersion = recipe.versions[0];
+  const summary = recipe.description || latestVersion?.roughNotes;
 
   return (
     <a
@@ -21,7 +22,7 @@ export function RecipeListItem({ recipe }: RecipeListItemProps) {
             {recipe.status === "draft" ? "Needs review" : "Active"}
           </span>
         </div>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{recipe.description}</p>
+        {summary ? <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{summary}</p> : null}
         <div className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map(tag => (
             <span key={tag} className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs text-muted-foreground">
