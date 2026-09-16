@@ -1,0 +1,17 @@
+services:
+  yes-chef:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yes-chef:local
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8080
+    ports:
+      - "${YES_CHEF_PORT:-8080}:8080"
+    volumes:
+      # Local development uses the repo database; Hetzner can override this
+      # with YES_CHEF_DATA_DIR=/opt/yes-chef/data.
+      - ${YES_CHEF_DATA_DIR:-./data}:/app/data
+    restart: unless-stopped
