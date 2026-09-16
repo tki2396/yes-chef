@@ -1,8 +1,10 @@
-const rawBasePath = typeof process === "undefined" ? "" : (process.env.PUBLIC_BASE_PATH ?? "");
+// Bun replaces this expression at build time, so it is safe in the browser.
+// A runtime `typeof process` guard would discard the embedded GitHub Pages path.
+const rawBasePath = process.env.PUBLIC_BASE_PATH ?? "";
 
 export const basePath = normalizeBasePath(rawBasePath);
 
-function normalizeBasePath(path: string) {
+export function normalizeBasePath(path: string) {
   if (!path || path === "/") return "";
 
   const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
