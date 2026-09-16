@@ -1,6 +1,6 @@
-// Bun replaces this expression at build time, so it is safe in the browser.
-// A runtime `typeof process` guard would discard the embedded GitHub Pages path.
-const rawBasePath = process.env.PUBLIC_BASE_PATH ?? "";
+// Static builds replace this global; Bun's dev server leaves it undefined.
+// `typeof` is safe for an undeclared browser global, unlike reading `process.env`.
+const rawBasePath = typeof __PUBLIC_BASE_PATH__ === "undefined" ? "" : __PUBLIC_BASE_PATH__;
 
 export const basePath = normalizeBasePath(rawBasePath);
 
