@@ -11,6 +11,7 @@
     "build": "bun run build.ts",
     "build:gh-pages": "bun run build && bun run scripts/prepare-gh-pages.ts",
     "build:gh-pages:project": "PUBLIC_BASE_PATH=/yes-chef bun run build:gh-pages",
+    "preview:pages": "bun run build:gh-pages:project && bun run scripts/preview-gh-pages.ts",
     "db:status": "bun run scripts/db-status.ts",
     "db:seed": "bun run scripts/seed-db.ts",
     "test": "bun test"

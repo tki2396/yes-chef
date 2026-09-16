@@ -126,6 +126,7 @@ console.log("\n🚀 Starting build process...\n");
 // Parse CLI arguments with our magical parser
 const cliConfig = parseArgs();
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
+const publicBasePath = process.env.PUBLIC_BASE_PATH?.replace(/\/$/, "") ?? "";
 
 if (existsSync(outdir)) {
   console.log(`🗑️ Cleaning previous build at ${outdir}`);
@@ -148,9 +149,10 @@ const result = await build({
   minify: true,
   target: "browser",
   sourcemap: "linked",
+  publicPath: publicBasePath ? `${publicBasePath}/` : undefined,
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
-    "process.env.PUBLIC_BASE_PATH": JSON.stringify(process.env.PUBLIC_BASE_PATH ?? ""),
+    __PUBLIC_BASE_PATH__: JSON.stringify(publicBasePath),
   },
   ...cliConfig, // Merge in any CLI-provided options
 });
