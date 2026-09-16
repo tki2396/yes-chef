@@ -32,7 +32,7 @@ export function APITester() {
         className="flex items-center gap-2 bg-card p-3 rounded-xl font-mono border border-input w-full"
       >
         <Select name="method" defaultValue="GET">
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger className="w-25">
             <SelectValue placeholder="Method" />
           </SelectTrigger>
           <SelectContent>
@@ -63,7 +63,7 @@ export function APITester() {
         readOnly
         placeholder="Response will appear here..."
         className={cn(
-          "w-full min-h-[140px] bg-card",
+          "w-full min-h-35 bg-card",
           "border border-input rounded-xl p-3",
           "font-mono resize-y",
           "placeholder:text-muted-foreground",
