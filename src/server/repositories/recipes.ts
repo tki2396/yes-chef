@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
-import type { Ingredient, Recipe, RecipeStatus, RecipeVersion, RecipeVisibility } from "@/types/recipe";
+import type { CreateRecipeInput } from "@/shared/recipe-api";
+import type { Recipe, RecipeStatus, RecipeVersion, RecipeVisibility } from "@/types/recipe";
 
 type RecipeRow = {
   id: string;
@@ -40,28 +41,6 @@ type StepRow = {
   position: number;
   instruction: string;
   duration: string | null;
-};
-
-export type CreateRecipeInput = {
-  title: string;
-  description?: string;
-  status?: RecipeStatus;
-  visibility?: RecipeVisibility;
-  sourceLabel?: string;
-  version?: {
-    label?: string;
-    source?: RecipeVersion["source"];
-    roughNotes?: string;
-    activeTime?: string;
-    passiveTime?: string;
-    servings?: string;
-    ingredients?: Array<Omit<Ingredient, "id">>;
-    steps?: Array<{ text: string; duration?: string }>;
-    outcomeNotes?: string;
-    rating?: number;
-    effortRating?: number;
-    tags?: string[];
-  };
 };
 
 export class RecipeRepository {
