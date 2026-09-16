@@ -18,6 +18,7 @@ export const recipes: Recipe[] = [
         label: "Latest attempt",
         createdAt: "2026-07-18",
         source: "manual",
+        visibility: "private",
         activeTime: "15 min",
         passiveTime: "25 min",
         servings: "3-4",
@@ -56,6 +57,7 @@ export const recipes: Recipe[] = [
         label: "Imported draft",
         createdAt: "2026-07-16",
         source: "import",
+        visibility: "private",
         activeTime: "10 min",
         servings: "2",
         ingredients: [
@@ -88,6 +90,7 @@ export const recipes: Recipe[] = [
         label: "Less sweet test",
         createdAt: "2026-07-10",
         source: "variation",
+        visibility: "private",
         activeTime: "25 min",
         passiveTime: "1 hr chill",
         servings: "18 cookies",
