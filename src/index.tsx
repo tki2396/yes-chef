@@ -1,36 +1,26 @@
 import { serve } from "bun";
 import index from "./index.html";
 import { getAppDatabase } from "./server/db/database";
+import { createRecipeApi } from "./server/api/recipes";
+import { RecipeRepository } from "./server/repositories/recipes";
 
-getAppDatabase({ seedNewDatabase: process.env.NODE_ENV !== "production" });
+const database = getAppDatabase({ seedNewDatabase: process.env.NODE_ENV !== "production" });
+const recipeApi = createRecipeApi(new RecipeRepository(database));
 
 const server = serve({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   routes: {
-    // Serve index.html for all unmatched routes.
+    "/api/recipes": {
+      GET: () => recipeApi.list(),
+      POST: request => recipeApi.create(request),
+    },
+
+    "/api/recipes/:id": {
+      GET: request => recipeApi.detail(request.params.id),
+    },
+
+    // Serve index.html for all unmatched application routes.
     "/*": index,
-
-    "/api/hello": {
-      async GET(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "GET",
-        });
-      },
-      async PUT(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "PUT",
-        });
-      },
-    },
-
-    "/api/hello/:name": async req => {
-      const name = req.params.name;
-      return Response.json({
-        message: `Hello, ${name}!`,
-      });
-    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
