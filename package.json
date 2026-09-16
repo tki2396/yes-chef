@@ -10,7 +10,10 @@
     "start": "NODE_ENV=production bun src/index.tsx",
     "build": "bun run build.ts",
     "build:gh-pages": "bun run build && bun run scripts/prepare-gh-pages.ts",
-    "build:gh-pages:project": "PUBLIC_BASE_PATH=/yes-chef bun run build:gh-pages"
+    "build:gh-pages:project": "PUBLIC_BASE_PATH=/yes-chef bun run build:gh-pages",
+    "db:status": "bun run scripts/db-status.ts",
+    "db:seed": "bun run scripts/seed-db.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.0",

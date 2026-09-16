@@ -19,9 +19,12 @@ export type RecipeStep = {
 export type RecipeVersion = {
   id: string;
   recipeId: string;
+  parentVersionId?: string;
   label: string;
   createdAt: string;
   source: "manual" | "import" | "variation";
+  visibility: RecipeVisibility;
+  roughNotes?: string;
   activeTime?: string;
   passiveTime?: string;
   servings?: string;

@@ -1,5 +1,8 @@
 import { serve } from "bun";
 import index from "./index.html";
+import { getAppDatabase } from "./server/db/database";
+
+getAppDatabase({ seedNewDatabase: process.env.NODE_ENV !== "production" });
 
 const server = serve({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
