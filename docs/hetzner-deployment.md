@@ -12,7 +12,7 @@ Install the Ansible collection on the workstation:
 
 ```bash
 ansible-galaxy collection install \
-  -r deploy/hetzner/ansible/requirements.yml
+  -r deploy/requirements.yml
 ```
 
 Authenticate Docker to GHCR and make the resulting package public, or arrange

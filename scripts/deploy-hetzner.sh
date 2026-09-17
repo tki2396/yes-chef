@@ -28,6 +28,6 @@ ansible-playbook \
   --private-key "$SSH_IDENTITY" \
   --extra-vars "yes_chef_image=$YES_CHEF_IMAGE" \
   --extra-vars "yes_chef_domain=$YES_CHEF_DOMAIN" \
-  "$REPO_ROOT/deploy/hetzner/ansible/site.yml"
+  "$REPO_ROOT/deploy/site.yml"
 
 echo "Deployed $YES_CHEF_IMAGE to https://$YES_CHEF_DOMAIN"

@@ -69,7 +69,7 @@
 
     - name: Install the Yes Chef Compose definition
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../../compose.production.yaml"
+        src: "{{ playbook_dir }}/../compose.production.yaml"
         dest: /opt/apps/yes-chef/compose.yaml
         mode: "0644"
 
