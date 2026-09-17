@@ -1,0 +1,126 @@
+---
+- name: Deploy Yes Chef
+  hosts: all
+  become: true
+
+  vars:
+    yes_chef_domain: ""
+    yes_chef_image: ""
+    registry_username: "{{ lookup('ansible.builtin.env', 'REGISTRY_USERNAME') }}"
+    registry_password: "{{ lookup('ansible.builtin.env', 'REGISTRY_PASSWORD') }}"
+
+  pre_tasks:
+    - name: Validate required deployment variables
+      ansible.builtin.assert:
+        that:
+          - yes_chef_domain is match('^[A-Za-z0-9.-]+$')
+          - yes_chef_image | length > 0
+        fail_msg: Set yes_chef_domain and yes_chef_image.
+
+    - name: Check for the shared proxy Compose definition
+      ansible.builtin.stat:
+        path: /opt/proxy/compose.yaml
+      register: proxy_compose
+
+    - name: Require the shared host infrastructure
+      ansible.builtin.assert:
+        that: proxy_compose.stat.exists
+        fail_msg: >-
+          The shared proxy is not configured. Run the host playbook from the
+          Infra repository before deploying Yes Chef.
+
+    - name: Inspect the shared proxy network
+      ansible.builtin.command: docker network inspect proxy
+      register: proxy_network
+      changed_when: false
+      failed_when: false
+
+    - name: Require the shared proxy network
+      ansible.builtin.assert:
+        that: proxy_network.rc == 0
+        fail_msg: >-
+          The shared Docker proxy network is missing. Run the host playbook
+          from the Infra repository before deploying Yes Chef.
+
+  tasks:
+    - name: Create the Yes Chef directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: /opt/apps/yes-chef, owner: root, group: root, mode: "0755" }
+        - { path: /opt/apps/yes-chef/data, owner: "1000", group: "1000", mode: "0750" }
+
+    - name: Install the Yes Chef Compose definition
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../compose.production.yaml"
+        dest: /opt/apps/yes-chef/compose.yaml
+        mode: "0644"
+
+    - name: Pin the deployed Yes Chef image
+      ansible.builtin.template:
+        src: yes-chef.env.j2
+        dest: /opt/apps/yes-chef/.env
+        mode: "0600"
+      register: yes_chef_image_pin
+
+    - name: Install the Yes Chef Caddy route
+      ansible.builtin.template:
+        src: yes-chef.caddy.j2
+        dest: /opt/proxy/sites/yes-chef.caddy
+        mode: "0644"
+
+    - name: Pull and deploy Yes Chef
+      block:
+        - name: Authenticate to the container registry
+          community.docker.docker_login:
+            registry_url: ghcr.io
+            username: "{{ registry_username }}"
+            password: "{{ registry_password }}"
+            reauthorize: true
+          when:
+            - registry_username | length > 0
+            - registry_password | length > 0
+          no_log: true
+
+        - name: Deploy Yes Chef
+          community.docker.docker_compose_v2:
+            project_src: /opt/apps/yes-chef
+            state: present
+            pull: always
+            remove_orphans: true
+            recreate: "{{ 'always' if yes_chef_image_pin.changed else 'auto' }}"
+      always:
+        - name: Remove temporary container registry credentials
+          community.docker.docker_login:
+            registry_url: ghcr.io
+            state: absent
+          when:
+            - registry_username | length > 0
+            - registry_password | length > 0
+          no_log: true
+
+    - name: Validate Caddy configuration
+      ansible.builtin.command:
+        cmd: docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile
+        chdir: /opt/proxy
+      changed_when: false
+
+    - name: Reload Caddy configuration
+      ansible.builtin.command:
+        cmd: docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+        chdir: /opt/proxy
+      changed_when: true
+
+    - name: Wait for the public health endpoint
+      ansible.builtin.uri:
+        url: "https://{{ yes_chef_domain }}/healthz"
+        status_code: 200
+        return_content: true
+      register: healthcheck
+      retries: 24
+      delay: 5
+      until: healthcheck.status == 200

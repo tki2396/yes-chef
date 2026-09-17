@@ -6,10 +6,32 @@ import { RecipeRepository } from "./server/repositories/recipes";
 
 const database = getAppDatabase({ seedNewDatabase: process.env.NODE_ENV !== "production" });
 const recipeApi = createRecipeApi(new RecipeRepository(database));
+const developmentIndex = index;
+
+async function productionAsset(request: Request): Promise<Response> {
+  const pathname = decodeURIComponent(new URL(request.url).pathname);
+  const relativePath = pathname.replace(/^\/+/, "");
+
+  if (relativePath.includes("..")) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const asset = Bun.file(`./dist/${relativePath || "index.html"}`);
+  if (await asset.exists()) {
+    return new Response(asset);
+  }
+
+  return new Response(Bun.file("./dist/index.html"));
+}
 
 const server = serve({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   routes: {
+    "/healthz": () => {
+      database.query("SELECT 1").get();
+      return Response.json({ status: "ok" });
+    },
+
     "/api/recipes": {
       GET: () => recipeApi.list(),
       POST: request => recipeApi.create(request),
@@ -19,8 +41,9 @@ const server = serve({
       GET: request => recipeApi.detail(request.params.id),
     },
 
-    // Serve index.html for all unmatched application routes.
-    "/*": index,
+    // Development serves the HTML entrypoint directly. Production serves the
+    // compiled assets and falls back to dist/index.html for client-side routes.
+    "/*": process.env.NODE_ENV === "production" ? productionAsset : developmentIndex,
   },
 
   development: process.env.NODE_ENV !== "production" && {
