@@ -9,21 +9,6 @@
     registry_username: "{{ lookup('ansible.builtin.env', 'REGISTRY_USERNAME') }}"
     registry_password: "{{ lookup('ansible.builtin.env', 'REGISTRY_PASSWORD') }}"
 
-  handlers:
-    - name: Validate Caddy configuration
-      ansible.builtin.command:
-        cmd: docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile
-        chdir: /opt/proxy
-      changed_when: false
-      listen: Reload Caddy
-
-    - name: Reload Caddy configuration
-      ansible.builtin.command:
-        cmd: docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
-        chdir: /opt/proxy
-      changed_when: true
-      listen: Reload Caddy
-
   pre_tasks:
     - name: Validate required deployment variables
       ansible.builtin.assert:
@@ -87,7 +72,6 @@
         src: yes-chef.caddy.j2
         dest: /opt/proxy/sites/yes-chef.caddy
         mode: "0644"
-      notify: Reload Caddy
 
     - name: Pull and deploy Yes Chef
       block:
@@ -119,8 +103,17 @@
             - registry_password | length > 0
           no_log: true
 
-    - name: Apply pending Caddy handlers
-      ansible.builtin.meta: flush_handlers
+    - name: Validate Caddy configuration
+      ansible.builtin.command:
+        cmd: docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile
+        chdir: /opt/proxy
+      changed_when: false
+
+    - name: Reload Caddy configuration
+      ansible.builtin.command:
+        cmd: docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+        chdir: /opt/proxy
+      changed_when: true
 
     - name: Wait for the public health endpoint
       ansible.builtin.uri:
