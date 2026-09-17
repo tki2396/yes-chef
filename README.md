@@ -22,6 +22,8 @@ This project uses Bun v1.4.2. [Bun](https://bun.sh) is a fast all-in-one JavaScr
 
 ## Hetzner deployment
 
-Production runs as an isolated Docker Compose project behind a shared Caddy
-proxy, allowing multiple applications to coexist on one server. See the
-[Hetzner deployment runbook](docs/hetzner-deployment.md).
+This repository owns the Yes Chef image and its production Compose project.
+Shared host configuration and Caddy live in the
+[`Infra`](https://github.com/tki2396/Infra) repository so other applications
+can use the same server. See the
+[Yes Chef deployment runbook](docs/hetzner-deployment.md).

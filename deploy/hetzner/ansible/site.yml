@@ -1,31 +1,13 @@
 ---
-- name: Configure and deploy the Yes Chef host
+- name: Deploy Yes Chef
   hosts: all
   become: true
 
   vars:
-    caddy_email: ""
     yes_chef_domain: ""
     yes_chef_image: ""
-    swap_size_mb: 2048
 
   handlers:
-    - name: Validate ssh configuration
-      ansible.builtin.command: sshd -t
-      changed_when: false
-      listen: Restart ssh
-
-    - name: Restart ssh service
-      ansible.builtin.service:
-        name: ssh
-        state: restarted
-      listen: Restart ssh
-
-    - name: Restart fail2ban
-      ansible.builtin.service:
-        name: fail2ban
-        state: restarted
-
     - name: Validate Caddy configuration
       ansible.builtin.command:
         cmd: docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile
@@ -44,232 +26,36 @@
     - name: Validate required deployment variables
       ansible.builtin.assert:
         that:
-          - caddy_email is match('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$')
           - yes_chef_domain is match('^[A-Za-z0-9.-]+$')
           - yes_chef_image | length > 0
-        fail_msg: Set caddy_email, yes_chef_domain, and yes_chef_image.
+        fail_msg: Set yes_chef_domain and yes_chef_image.
 
-    - name: Check whether Docker is already installed
-      ansible.builtin.command: docker --version
-      register: docker_available
-      changed_when: false
-      failed_when: false
-      check_mode: false
+    - name: Check for the shared proxy Compose definition
+      ansible.builtin.stat:
+        path: /opt/proxy/compose.yaml
+      register: proxy_compose
 
-    - name: Detect a running Coolify installation
-      ansible.builtin.command: docker ps --quiet --filter name=coolify
-      register: coolify_containers
-      changed_when: false
-      failed_when: false
-      check_mode: false
-      when: docker_available.rc == 0
-
-    - name: Refuse to compete with Coolify for the host proxy
+    - name: Require the shared host infrastructure
       ansible.builtin.assert:
-        that: coolify_containers.stdout | default('') | trim | length == 0
+        that: proxy_compose.stat.exists
         fail_msg: >-
-          Coolify containers are still running. Stop and remove the old Coolify
-          deployment deliberately before allowing standalone Caddy to own ports
-          80 and 443. This playbook will not remove Coolify automatically.
+          The shared proxy is not configured. Run the host playbook from the
+          Infra repository before deploying Yes Chef.
 
-    - name: Detect the managed Caddy proxy
-      ansible.builtin.command: docker ps --quiet --filter name=shared-proxy-caddy-1
-      register: managed_caddy
+    - name: Inspect the shared proxy network
+      ansible.builtin.command: docker network inspect proxy
+      register: proxy_network
       changed_when: false
       failed_when: false
-      check_mode: false
-      when: docker_available.rc == 0
 
-    - name: Check whether HTTP or HTTPS ports are already occupied
-      ansible.builtin.command: "ss -H -ltn 'sport = :80 or sport = :443'"
-      register: occupied_web_ports
-      changed_when: false
-      failed_when: false
-      check_mode: false
-
-    - name: Refuse to replace an unknown web proxy
+    - name: Require the shared proxy network
       ansible.builtin.assert:
-        that:
-          - occupied_web_ports.stdout | trim | length == 0 or managed_caddy.stdout | default('') | trim | length > 0
+        that: proxy_network.rc == 0
         fail_msg: >-
-          Ports 80 or 443 are occupied by something other than this playbook's
-          Caddy container. Inspect `sudo ss -lntup` and `docker ps` first.
+          The shared Docker proxy network is missing. Run the host playbook
+          from the Infra repository before deploying Yes Chef.
 
   tasks:
-    - name: Install baseline host packages
-      ansible.builtin.apt:
-        name:
-          - ca-certificates
-          - curl
-          - fail2ban
-          - python3-docker
-          - ufw
-          - unattended-upgrades
-        state: present
-        update_cache: true
-        cache_valid_time: 3600
-      tags: [host]
-
-    - name: Install Docker from Ubuntu packages when absent
-      ansible.builtin.apt:
-        name:
-          - docker-compose-v2
-          - docker.io
-        state: present
-      when: docker_available.rc != 0
-      tags: [host]
-
-    - name: Enable Docker
-      ansible.builtin.service:
-        name: docker
-        enabled: true
-        state: started
-      tags: [host]
-
-    - name: Verify the Docker Compose plugin
-      ansible.builtin.command: docker compose version
-      changed_when: false
-      tags: [host]
-
-    - name: Check for the swapfile
-      ansible.builtin.stat:
-        path: /swapfile
-      register: swapfile
-      tags: [host]
-
-    - name: Create the swapfile
-      when: not swapfile.stat.exists
-      tags: [host]
-      block:
-        - name: Allocate swap space
-          ansible.builtin.command: "fallocate -l {{ swap_size_mb }}M /swapfile"
-          changed_when: true
-
-        - name: Secure the swapfile
-          ansible.builtin.file:
-            path: /swapfile
-            owner: root
-            group: root
-            mode: "0600"
-
-        - name: Format the swapfile
-          ansible.builtin.command: mkswap /swapfile
-          changed_when: true
-
-    - name: Persist the swapfile
-      ansible.builtin.lineinfile:
-        path: /etc/fstab
-        line: /swapfile none swap sw 0 0
-        state: present
-      tags: [host]
-
-    - name: Check active swap devices
-      ansible.builtin.command: swapon --show=NAME --noheadings
-      register: active_swap
-      changed_when: false
-      check_mode: false
-      tags: [host]
-
-    - name: Enable the swapfile
-      ansible.builtin.command: swapon /swapfile
-      when: "'/swapfile' not in active_swap.stdout"
-      changed_when: true
-      tags: [host]
-
-    - name: Harden SSH
-      ansible.builtin.copy:
-        dest: /etc/ssh/sshd_config.d/99-hardening.conf
-        mode: "0644"
-        content: |
-          PermitRootLogin prohibit-password
-          PasswordAuthentication no
-          KbdInteractiveAuthentication no
-          X11Forwarding no
-      notify: Restart ssh
-      tags: [host]
-
-    - name: Enable automatic security updates
-      ansible.builtin.copy:
-        dest: /etc/apt/apt.conf.d/20auto-upgrades
-        mode: "0644"
-        content: |
-          APT::Periodic::Update-Package-Lists "1";
-          APT::Periodic::Unattended-Upgrade "1";
-      tags: [host]
-
-    - name: Configure fail2ban for SSH
-      ansible.builtin.copy:
-        dest: /etc/fail2ban/jail.local
-        mode: "0644"
-        content: |
-          [sshd]
-          enabled = true
-          maxretry = 5
-          bantime = 1h
-          findtime = 10m
-      notify: Restart fail2ban
-      tags: [host]
-
-    - name: Enable fail2ban
-      ansible.builtin.service:
-        name: fail2ban
-        enabled: true
-        state: started
-      tags: [host]
-
-    - name: Set the incoming firewall policy
-      community.general.ufw:
-        direction: incoming
-        policy: deny
-      tags: [host]
-
-    - name: Set the outgoing firewall policy
-      community.general.ufw:
-        direction: outgoing
-        policy: allow
-      tags: [host]
-
-    - name: Allow public service ports
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: tcp
-      loop: ["22", "80", "443"]
-      tags: [host]
-
-    - name: Allow HTTP/3
-      community.general.ufw:
-        rule: allow
-        port: "443"
-        proto: udp
-      tags: [host]
-
-    - name: Remove obsolete Coolify dashboard firewall rules
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: tcp
-        delete: true
-      loop: ["6001", "6002", "8000"]
-      tags: [host]
-
-    - name: Enable the firewall
-      community.general.ufw:
-        state: enabled
-      tags: [host]
-
-    - name: Create the shared proxy directories
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-      loop:
-        - /opt/proxy
-        - /opt/proxy/sites
-      tags: [proxy]
-
     - name: Create the Yes Chef directories
       ansible.builtin.file:
         path: "{{ item.path }}"
@@ -280,58 +66,12 @@
       loop:
         - { path: /opt/apps/yes-chef, owner: root, group: root, mode: "0755" }
         - { path: /opt/apps/yes-chef/data, owner: "1000", group: "1000", mode: "0750" }
-      tags: [app]
-
-    - name: Create the shared Docker proxy network
-      community.docker.docker_network:
-        name: proxy
-        state: present
-      tags: [proxy]
-
-    - name: Install the proxy Compose definition
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../proxy/compose.yaml"
-        dest: /opt/proxy/compose.yaml
-        mode: "0644"
-      tags: [proxy]
-
-    - name: Install the main Caddy configuration
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../proxy/Caddyfile"
-        dest: /opt/proxy/Caddyfile
-        mode: "0644"
-      notify: Reload Caddy
-      tags: [proxy]
-
-    - name: Install the Caddy environment
-      ansible.builtin.template:
-        src: caddy.env.j2
-        dest: /opt/proxy/.env
-        mode: "0600"
-      notify: Reload Caddy
-      tags: [proxy]
-
-    - name: Install the Yes Chef Caddy route
-      ansible.builtin.template:
-        src: yes-chef.caddy.j2
-        dest: /opt/proxy/sites/yes-chef.caddy
-        mode: "0644"
-      notify: Reload Caddy
-      tags: [proxy, app]
-
-    - name: Start the shared proxy
-      community.docker.docker_compose_v2:
-        project_src: /opt/proxy
-        state: present
-        pull: missing
-      tags: [proxy]
 
     - name: Install the Yes Chef Compose definition
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../../compose.production.yaml"
         dest: /opt/apps/yes-chef/compose.yaml
         mode: "0644"
-      tags: [app]
 
     - name: Pin the deployed Yes Chef image
       ansible.builtin.template:
@@ -339,7 +79,13 @@
         dest: /opt/apps/yes-chef/.env
         mode: "0600"
       register: yes_chef_image_pin
-      tags: [app]
+
+    - name: Install the Yes Chef Caddy route
+      ansible.builtin.template:
+        src: yes-chef.caddy.j2
+        dest: /opt/proxy/sites/yes-chef.caddy
+        mode: "0644"
+      notify: Reload Caddy
 
     - name: Deploy Yes Chef
       community.docker.docker_compose_v2:
@@ -348,9 +94,8 @@
         pull: always
         remove_orphans: true
         recreate: "{{ 'always' if yes_chef_image_pin.changed else 'auto' }}"
-      tags: [app]
 
-    - name: Apply pending service handlers
+    - name: Apply pending Caddy handlers
       ansible.builtin.meta: flush_handlers
 
     - name: Wait for the public health endpoint
@@ -362,4 +107,3 @@
       retries: 24
       delay: 5
       until: healthcheck.status == 200
-      tags: [verify]
