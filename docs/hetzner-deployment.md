@@ -29,10 +29,21 @@ merging the deployment branch:
 Production does not deploy from feature branches. Failed workflow jobs can be
 retried against the same immutable image tag.
 
-## Manual deployment and rollback
+## Manual publish and deployment
 
-The local script remains available for diagnostics and rollback. Install its
-Ansible collection, then provide an existing image reference:
+The complete workflow can also be run from the workstation. Authenticate the
+local Docker client to GHCR with a token that has `write:packages`, then run:
+
+```bash
+./scripts/publish-image.sh
+```
+
+The script builds `linux/amd64`, publishes the same full commit-SHA and
+`latest` tags used by CI, and prints the immutable image reference. It does not
+load the image into the workstation's Docker engine or start a container.
+
+Export the printed reference and deploy it:
+
 
 ```bash
 ansible-galaxy collection install -r deploy/requirements.yml
@@ -44,6 +55,11 @@ export YES_CHEF_DOMAIN=recipes.example.com
 export YES_CHEF_IMAGE=ghcr.io/tki2396/yes-chef:COMMIT_TAG
 ./scripts/deploy-hetzner.sh
 ```
+
+The same deploy command can roll back to any previously published SHA. If the
+package is private, provide `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` so
+Ansible can authenticate the server for the pull and remove the credentials
+afterward. Public packages can be pulled without those variables.
 
 The app playbook installs this repository's `compose.production.yaml`, creates
 the persistent SQLite directory, adds the Yes Chef Caddy route, deploys the
