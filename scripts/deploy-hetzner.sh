@@ -1,20 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Builds an immutable linux/amd64 image, pushes it to GHCR, and updates only
-# the Yes Chef Compose project on the shared host.
-: "${DEPLOY_HOST:?Set DEPLOY_HOST, for example 203.0.113.10}"
-: "${YES_CHEF_DOMAIN:?Set YES_CHEF_DOMAIN, for example recipes.example.com}"
-
-if [[ ! "$YES_CHEF_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
-  echo "YES_CHEF_DOMAIN must be a plain hostname" >&2
-  exit 1
-fi
-
-DEPLOY_USER="${DEPLOY_USER:-root}"
-SSH_IDENTITY="${SSH_IDENTITY:-$HOME/.ssh/hetzner_deploy}"
+# Build and publish an immutable image, then let Ansible converge the host.
 IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/tki2396/yes-chef}"
-REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! git -C "$REPO_ROOT" diff --quiet || \
@@ -24,32 +12,58 @@ if ! git -C "$REPO_ROOT" diff --quiet || \
   exit 1
 fi
 
-IMAGE_TAG="$(git -C "$REPO_ROOT" rev-parse --short=12 HEAD)"
-IMAGE_REF="$IMAGE_REPOSITORY:$IMAGE_TAG"
-STAGING_DIR="$(mktemp -d)"
-trap 'rm -r "$STAGING_DIR"' EXIT
+if [[ -n "${DEPLOY_IMAGE:-}" ]]; then
+  IMAGE_REF="$DEPLOY_IMAGE"
+  printf 'Deploying existing image %s\n' "$IMAGE_REF"
+else
+  IMAGE_TAG="$(git -C "$REPO_ROOT" rev-parse --short=12 HEAD)"
+  IMAGE_REF="$IMAGE_REPOSITORY:$IMAGE_TAG"
 
-SSH=(ssh -i "$SSH_IDENTITY" -o IdentitiesOnly=yes "$REMOTE")
-SCP=(scp -i "$SSH_IDENTITY" -o IdentitiesOnly=yes)
+  printf 'Publishing %s\n' "$IMAGE_REF"
+  docker buildx build \
+    --platform linux/amd64 \
+    --tag "$IMAGE_REF" \
+    --tag "$IMAGE_REPOSITORY:latest" \
+    --push \
+    "$REPO_ROOT"
+fi
 
-printf 'Publishing %s\n' "$IMAGE_REF"
-docker buildx build \
-  --platform linux/amd64 \
-  --tag "$IMAGE_REF" \
-  --tag "$IMAGE_REPOSITORY:latest" \
-  --push \
-  "$REPO_ROOT"
+if [[ "${PUBLISH_ONLY:-0}" == "1" && -n "${DEPLOY_IMAGE:-}" ]]; then
+  echo "PUBLISH_ONLY cannot be combined with DEPLOY_IMAGE because nothing would be published." >&2
+  exit 1
+fi
 
-sed "s/__YES_CHEF_DOMAIN__/$YES_CHEF_DOMAIN/g" \
-  "$REPO_ROOT/deploy/hetzner/yes-chef.caddy.template" \
-  > "$STAGING_DIR/yes-chef.caddy"
-printf 'YES_CHEF_IMAGE=%s\n' "$IMAGE_REF" > "$STAGING_DIR/yes-chef.env"
+if [[ "${PUBLISH_ONLY:-0}" == "1" ]]; then
+  printf 'Published %s; deployment skipped because PUBLISH_ONLY=1.\n' "$IMAGE_REF"
+  exit 0
+fi
 
-"${SSH[@]}" 'set -eu; sudo install -d -m 0755 /opt/apps/yes-chef/data /opt/proxy/sites; sudo chown -R 1000:1000 /opt/apps/yes-chef/data; sudo docker network inspect proxy >/dev/null'
-"${SCP[@]}" "$REPO_ROOT/compose.production.yaml" "$REMOTE:/tmp/yes-chef-compose.yaml"
-"${SCP[@]}" "$STAGING_DIR/yes-chef.env" "$REMOTE:/tmp/yes-chef.env"
-"${SCP[@]}" "$STAGING_DIR/yes-chef.caddy" "$REMOTE:/tmp/yes-chef.caddy"
+: "${DEPLOY_HOST:?Set DEPLOY_HOST, for example 203.0.113.10}"
+: "${YES_CHEF_DOMAIN:?Set YES_CHEF_DOMAIN, for example recipes.example.com}"
+: "${CADDY_EMAIL:?Set CADDY_EMAIL for TLS expiry notices}"
 
-"${SSH[@]}" 'set -eu; sudo install -m 0644 /tmp/yes-chef-compose.yaml /opt/apps/yes-chef/compose.yaml; sudo install -m 0600 /tmp/yes-chef.env /opt/apps/yes-chef/.env; sudo install -m 0644 /tmp/yes-chef.caddy /opt/proxy/sites/yes-chef.caddy; cd /opt/apps/yes-chef; sudo docker compose pull; sudo docker compose up -d --remove-orphans; cd /opt/proxy; sudo docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile; sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile'
+if [[ ! "$YES_CHEF_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  echo "YES_CHEF_DOMAIN must be a plain hostname" >&2
+  exit 1
+fi
+
+if [[ ! "$CADDY_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$ ]]; then
+  echo "CADDY_EMAIL must be a plain email address" >&2
+  exit 1
+fi
+
+DEPLOY_USER="${DEPLOY_USER:-deploy}"
+SSH_IDENTITY="${SSH_IDENTITY:-$HOME/.ssh/hetzner_deploy}"
+
+ANSIBLE_CONFIG="$REPO_ROOT/deploy/hetzner/ansible/ansible.cfg" \
+ANSIBLE_LOCAL_TEMP="${ANSIBLE_LOCAL_TEMP:-/tmp/yes-chef-ansible}" \
+ansible-playbook \
+  --inventory "${DEPLOY_HOST}," \
+  --user "$DEPLOY_USER" \
+  --private-key "$SSH_IDENTITY" \
+  --extra-vars "yes_chef_image=$IMAGE_REF" \
+  --extra-vars "yes_chef_domain=$YES_CHEF_DOMAIN" \
+  --extra-vars "caddy_email=$CADDY_EMAIL" \
+  "$REPO_ROOT/deploy/hetzner/ansible/site.yml"
 
 echo "Deployed $IMAGE_REF to https://$YES_CHEF_DOMAIN"

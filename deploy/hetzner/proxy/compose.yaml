@@ -3,6 +3,8 @@ name: shared-proxy
 services:
   caddy:
     image: caddy:2.10-alpine
+    environment:
+      CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL in /opt/proxy/.env}
     ports:
       - "80:80"
       - "443:443"
@@ -37,4 +39,3 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
-
