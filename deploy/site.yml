@@ -6,6 +6,8 @@
   vars:
     yes_chef_domain: ""
     yes_chef_image: ""
+    registry_username: "{{ lookup('ansible.builtin.env', 'REGISTRY_USERNAME') }}"
+    registry_password: "{{ lookup('ansible.builtin.env', 'REGISTRY_PASSWORD') }}"
 
   handlers:
     - name: Validate Caddy configuration
@@ -87,13 +89,35 @@
         mode: "0644"
       notify: Reload Caddy
 
-    - name: Deploy Yes Chef
-      community.docker.docker_compose_v2:
-        project_src: /opt/apps/yes-chef
-        state: present
-        pull: always
-        remove_orphans: true
-        recreate: "{{ 'always' if yes_chef_image_pin.changed else 'auto' }}"
+    - name: Pull and deploy Yes Chef
+      block:
+        - name: Authenticate to the container registry
+          community.docker.docker_login:
+            registry_url: ghcr.io
+            username: "{{ registry_username }}"
+            password: "{{ registry_password }}"
+            reauthorize: true
+          when:
+            - registry_username | length > 0
+            - registry_password | length > 0
+          no_log: true
+
+        - name: Deploy Yes Chef
+          community.docker.docker_compose_v2:
+            project_src: /opt/apps/yes-chef
+            state: present
+            pull: always
+            remove_orphans: true
+            recreate: "{{ 'always' if yes_chef_image_pin.changed else 'auto' }}"
+      always:
+        - name: Remove temporary container registry credentials
+          community.docker.docker_login:
+            registry_url: ghcr.io
+            state: absent
+          when:
+            - registry_username | length > 0
+            - registry_password | length > 0
+          no_log: true
 
     - name: Apply pending Caddy handlers
       ansible.builtin.meta: flush_handlers

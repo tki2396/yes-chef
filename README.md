@@ -27,3 +27,6 @@ Shared host configuration and Caddy live in the
 [`Infra`](https://github.com/tki2396/Infra) repository so other applications
 can use the same server. See the
 [Yes Chef deployment runbook](docs/hetzner-deployment.md).
+
+Pushes to `main` build, publish, and deploy an immutable container image through
+GitHub Actions. Other branches do not deploy production.

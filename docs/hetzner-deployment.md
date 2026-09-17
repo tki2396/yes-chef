@@ -6,38 +6,37 @@ the Hetzner host, Docker, firewall, shared proxy network, and Caddy.
 
 Run the Infra host playbook once before deploying this application.
 
-## Install application dependencies
+## Automatic production deployment
 
-Install the Ansible collection on the workstation:
+Every push to `main` runs `.github/workflows/deploy-hetzner.yml`. The workflow:
 
-```bash
-ansible-galaxy collection install \
-  -r deploy/requirements.yml
-```
+1. Builds the `linux/amd64` image.
+2. Publishes immutable commit-SHA and `latest` tags to GHCR using the
+   repository's `GITHUB_TOKEN`.
+3. Authenticates the server to GHCR with that short-lived token.
+4. Deploys the exact commit-SHA image with Ansible.
+5. Removes the registry credentials from the server.
 
-Authenticate Docker to GHCR and make the resulting package public, or arrange
-registry authentication on the server if the package remains private.
+Configure a GitHub environment named `production` with these values before
+merging the deployment branch:
 
-```bash
-gh auth token | docker login ghcr.io \
-  -u YOUR_GITHUB_USERNAME --password-stdin
-```
+- Variable `DEPLOY_HOST`: the server IP address.
+- Variable `DEPLOY_USER`: `deploy`.
+- Variable `YES_CHEF_DOMAIN`: the public application hostname.
+- Secret `DEPLOY_SSH_KEY`: a dedicated private key for CI without a passphrase.
+- Secret `DEPLOY_KNOWN_HOSTS`: the pinned SSH host-key entry for the server.
 
-## Publish
+Production does not deploy from feature branches. Failed workflow jobs can be
+retried against the same immutable image tag.
 
-Publishing requires a clean Git tree. It builds for the server's `linux/amd64`
-platform, pushes both an immutable commit tag and `latest`, and does not load a
-new container image into the workstation's Docker engine.
+## Manual deployment and rollback
 
-```bash
-./scripts/publish-image.sh
-```
-
-## Deploy
-
-Use the immutable image reference printed by the publish script:
+The local script remains available for diagnostics and rollback. Install its
+Ansible collection, then provide an existing image reference:
 
 ```bash
+ansible-galaxy collection install -r deploy/requirements.yml
+
 export DEPLOY_HOST=203.0.113.10
 export DEPLOY_USER=deploy
 export SSH_IDENTITY="$HOME/.ssh/hetzner_deploy"
@@ -50,11 +49,6 @@ The app playbook installs this repository's `compose.production.yaml`, creates
 the persistent SQLite directory, adds the Yes Chef Caddy route, deploys the
 container, reloads Caddy, and checks the public health endpoint. It refuses to
 run until the shared proxy has been configured by the Infra repository.
-
-## Roll back
-
-Set `YES_CHEF_IMAGE` to a previously published immutable tag and run the same
-deployment script again.
 
 ## Inspect the app
 
