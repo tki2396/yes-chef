@@ -27,6 +27,11 @@ async function productionAsset(request: Request): Promise<Response> {
 const server = serve({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   routes: {
+    "/healthz": () => {
+      database.query("SELECT 1").get();
+      return Response.json({ status: "ok" });
+    },
+
     "/api/recipes": {
       GET: () => recipeApi.list(),
       POST: request => recipeApi.create(request),

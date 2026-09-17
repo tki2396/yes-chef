@@ -1,0 +1,5 @@
+__YES_CHEF_DOMAIN__ {
+	encode zstd gzip
+	reverse_proxy yes-chef:8080
+}
+
