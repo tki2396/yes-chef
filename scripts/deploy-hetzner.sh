@@ -21,7 +21,6 @@ if ! git -C "$REPO_ROOT" diff --quiet || \
   exit 1
 fi
 
-ANSIBLE_CONFIG="$REPO_ROOT/deploy/hetzner/ansible/ansible.cfg" \
 ANSIBLE_LOCAL_TEMP="${ANSIBLE_LOCAL_TEMP:-/tmp/yes-chef-ansible}" \
 ansible-playbook \
   --inventory "${DEPLOY_HOST}," \
