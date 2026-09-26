@@ -16,6 +16,7 @@ IMAGE_REF="$IMAGE_REPOSITORY:$IMAGE_TAG"
 
 printf 'Publishing %s\n' "$IMAGE_REF"
 docker buildx build \
+  --file "$REPO_ROOT/Dockerfile.production" \
   --platform linux/amd64 \
   --tag "$IMAGE_REF" \
   --tag "$IMAGE_REPOSITORY:latest" \
