@@ -22,6 +22,7 @@ export function seedDevelopmentData(db: Database) {
         servings: version.servings,
         ingredients: version.ingredients.map(({ label, amount, notes }) => ({ label, amount, notes })),
         steps: version.steps.map(({ text, duration }) => ({ text, duration })),
+        substitutionNotes: version.substitutionNotes,
         outcomeNotes: version.outcomeNotes,
         rating: version.rating,
         effortRating: version.effortRating,

@@ -11,6 +11,7 @@ export const recipes: Recipe[] = [
     updatedAt: "2026-07-18",
     sourceLabel: "manual note",
     mediaCount: 2,
+    media: [],
     versions: [
       {
         id: "spicy-tomato-beans-v1",
@@ -50,6 +51,7 @@ export const recipes: Recipe[] = [
     updatedAt: "2026-07-16",
     sourceLabel: "import draft",
     mediaCount: 0,
+    media: [],
     versions: [
       {
         id: "ginger-scallion-noodles-v1",
@@ -83,6 +85,7 @@ export const recipes: Recipe[] = [
     updatedAt: "2026-07-10",
     sourceLabel: "adapted from web recipe",
     mediaCount: 4,
+    media: [],
     versions: [
       {
         id: "brown-butter-cookies-v2",

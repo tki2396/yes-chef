@@ -41,6 +41,10 @@ const server = serve({
       GET: request => recipeApi.detail(request.params.id),
     },
 
+    "/api/recipes/:id/media/:mediaId": {
+      GET: request => recipeApi.media(request.params.id, request.params.mediaId),
+    },
+
     // Development serves the HTML entrypoint directly. Production serves the
     // compiled assets and falls back to dist/index.html for client-side routes.
     "/*": process.env.NODE_ENV === "production" ? productionAsset : developmentIndex,

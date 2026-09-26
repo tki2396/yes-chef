@@ -41,6 +41,26 @@ export function createRecipeApi(repository: RecipeRepository) {
       }
     },
 
+    media(recipeId: string, mediaId: string) {
+      try {
+        const media = repository.getMedia(recipeId, mediaId);
+        if (!media) return apiError(404, "recipe_not_found", "Recipe photo not found.");
+
+        const match = /^data:(image\/(?:gif|jpeg|png|webp));base64,(.+)$/.exec(media.storageKey);
+        if (!match) return apiError(500, "internal_error", "Recipe photo is invalid.");
+
+        return new Response(Buffer.from(match[2], "base64"), {
+          headers: {
+            "Content-Type": match[1],
+            "Cache-Control": "private, max-age=31536000, immutable",
+          },
+        });
+      } catch (error) {
+        console.error("Unable to load recipe photo", error);
+        return apiError(500, "internal_error", "Unable to load the recipe photo.");
+      }
+    },
+
     async create(request: Request) {
       let body: unknown;
 

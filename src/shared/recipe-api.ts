@@ -38,6 +38,11 @@ export const recipeVersionSchema = z.object({
   effortRating: z.number().int().min(1).max(5).optional(),
 });
 
+export const recipeMediaSchema = z.object({
+  id: z.string().min(1),
+  caption: z.string().optional(),
+});
+
 export const recipeSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -48,10 +53,15 @@ export const recipeSchema = z.object({
   updatedAt: z.string().min(1),
   sourceLabel: z.string().optional(),
   mediaCount: z.number().int().nonnegative(),
+  media: z.array(recipeMediaSchema),
   versions: z.array(recipeVersionSchema),
 });
 
 const optionalShortText = z.string().trim().max(200).optional();
+const imageDataUrl = z
+  .string()
+  .max(8_000_000, "Each photo must be smaller than 6 MB.")
+  .regex(/^data:image\/(?:gif|jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/, "Photo must be a supported image.");
 
 export const createRecipeInputSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(200),
@@ -86,11 +96,21 @@ export const createRecipeInputSchema = z.object({
         )
         .max(500)
         .optional(),
+      substitutionNotes: z.array(z.string().trim().min(1).max(1_000)).max(100).optional(),
       outcomeNotes: z.string().trim().max(20_000).optional(),
       rating: z.number().int().min(1).max(5).optional(),
       effortRating: z.number().int().min(1).max(5).optional(),
       tags: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
     })
+    .optional(),
+  media: z
+    .array(
+      z.object({
+        dataUrl: imageDataUrl,
+        caption: z.string().trim().max(500).optional(),
+      }),
+    )
+    .max(8, "Add no more than 8 photos at a time.")
     .optional(),
 });
 

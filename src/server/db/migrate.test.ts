@@ -14,7 +14,10 @@ describe("database migrations", () => {
   test("apply once and leave foreign keys enabled", () => {
     db = openDatabase(":memory:");
 
-    expect(getAppliedMigrations(db).map(migration => migration.name)).toEqual(["001_initial_schema.sql"]);
+    expect(getAppliedMigrations(db).map(migration => migration.name)).toEqual([
+      "001_initial_schema.sql",
+      "002_recipe_substitution_notes.sql",
+    ]);
     expect(migrateDatabase(db)).toEqual([]);
     expect(db.query<{ foreign_keys: number }, []>("PRAGMA foreign_keys").get()!.foreign_keys).toBe(1);
   });

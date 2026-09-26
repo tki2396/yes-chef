@@ -99,9 +99,16 @@ export function RecipeDetailPage({ recipeId = "" }: RecipeDetailPageProps) {
                 { label: "Active", value: version.activeTime ?? "TBD" },
                 { label: "Passive", value: version.passiveTime ?? "TBD" },
                 { label: "Servings", value: version.servings ?? "TBD" },
+                { label: "Taste", value: version.rating ? `${version.rating} / 5` : "Not rated" },
+                { label: "Effort", value: version.effortRating ? `${version.effortRating} / 5` : "Not rated" },
                 { label: "Source", value: recipe.sourceLabel ?? version.source },
               ]}
             />
+            {recipe.tags.length ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {recipe.tags.map(tag => <span key={tag} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">{tag}</span>)}
+              </div>
+            ) : null}
           </Section>
           <Section title="Ingredients">
             {version.ingredients.length ? (
@@ -174,6 +181,22 @@ export function RecipeDetailPage({ recipeId = "" }: RecipeDetailPageProps) {
               ) : null}
             </div>
           </Section>
+          {recipe.media.length ? (
+            <Section title="Photos" description={`${recipe.media.length} attached to this recipe`}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {recipe.media.map(photo => (
+                  <figure key={photo.id} className="overflow-hidden rounded-md border bg-background">
+                    <img
+                      src={`/api/recipes/${encodeURIComponent(recipe.id)}/media/${encodeURIComponent(photo.id)}`}
+                      alt={photo.caption || recipe.title}
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    {photo.caption ? <figcaption className="p-3 text-sm text-muted-foreground">{photo.caption}</figcaption> : null}
+                  </figure>
+                ))}
+              </div>
+            </Section>
+          ) : null}
         </div>
       </div>
     </>
