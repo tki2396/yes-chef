@@ -4,9 +4,6 @@ services:
   app:
     image: ${YES_CHEF_IMAGE:?Set YES_CHEF_IMAGE to the published image tag}
     environment:
-      NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: 8080
       YES_CHEF_DB_PATH: /app/data/yes-chef.sqlite
     expose:
       - "8080"
