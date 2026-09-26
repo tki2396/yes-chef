@@ -36,6 +36,11 @@ export type RecipeVersion = {
   effortRating?: number;
 };
 
+export type RecipeMedia = {
+  id: string;
+  caption?: string;
+};
+
 export type Recipe = {
   id: string;
   title: string;
@@ -46,5 +51,6 @@ export type Recipe = {
   updatedAt: string;
   sourceLabel?: string;
   mediaCount: number;
+  media: RecipeMedia[];
   versions: RecipeVersion[];
 };

@@ -8,7 +8,7 @@ const completedWork = [
   "Core routes for Today, Library, recipe details, creation, imports, drafts, and profile",
   "Private-first recipe model with versions, ingredients, steps, tags, media, and imports",
   "Local SQLite database with migrations, seed data, repository tests, and a recipe API",
-  "Working recipe library, recipe detail, and quick capture with a title and rough notes",
+  "Full private recipe logging with flexible times, servings, ingredients, instructions, tags, ratings, photos, substitutions, and version notes",
   "GitHub Pages navigation fixes, local Pages preview, and Bun 1.4.2 upgrade",
 ];
 
@@ -17,12 +17,12 @@ const buildOrder = [
     title: "Finish Recipe Log/Create",
     description:
       "Turn quick capture into the full flexible form: time, servings, ingredients, instructions, tags, ratings, photos, substitutions, and version notes.",
-    label: "Next",
+    label: "Done",
   },
   {
     title: "Make the Library easier to use",
     description: "Add search and filters for tags, recent recipes, favorites, and recipes that need review.",
-    label: "Planned",
+    label: "Next",
   },
   {
     title: "Build photo/screenshot import and draft review",
@@ -52,39 +52,39 @@ export function HomePage() {
         kicker="Project tracker"
         title="Today"
         description="A plain-language snapshot of what works, what comes next, and what we are intentionally saving for later. Update this page whenever a piece of work is merged."
-        action={{ label: "Open current feature", href: appPath("/recipes/new") }}
+        action={{ label: "Open current feature", href: appPath("/recipes") }}
       />
 
       <div className="grid gap-4">
         <Section
           title="Current milestone"
-          description="The technical foundation is usable. Product work now starts with the core recipe-logging experience."
+          description="The private recipe core is usable. The next milestone is making a growing library quick to navigate."
         >
           <div className="rounded-lg border bg-background p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-primary-foreground">
                 Next up
               </span>
-              <span className="text-xs font-medium text-muted-foreground">First real feature</span>
+              <span className="text-xs font-medium text-muted-foreground">Core workflow complete</span>
             </div>
-            <h2 className="mt-4 text-xl font-semibold">Finish Recipe Log/Create</h2>
+            <h2 className="mt-4 text-xl font-semibold">Make the Library easier to use</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              A cook can already save a title and rough notes. The next job is to make the rest of the recipe editable without
-              losing the fast, informal capture flow.
+              A cook can now save a full recipe or just the fragments they remember. Next, add search and filters so recipes,
+              favorites, recent work, and notes needing review stay easy to find.
             </p>
             <a
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold underline-offset-4 hover:underline"
-              href={appPath("/recipes/new")}
+              href={appPath("/recipes")}
             >
-              See the current recipe form
+              Open the recipe library
               <ArrowRight aria-hidden="true" className="size-4" />
             </a>
           </div>
           <div className="mt-3 rounded-lg bg-muted/60 p-4 text-sm leading-6">
             <p className="font-semibold">Where it works today</p>
             <p className="mt-1 text-muted-foreground">
-              The local app can load and save recipes through its SQLite database. GitHub Pages is a static preview for the
-              interface and this tracker; it cannot run the recipe server or database yet.
+              The local app can save flexible recipe details and attached photos in SQLite. GitHub Pages is a static preview
+              for the interface and this tracker; it cannot run the recipe server or database.
             </p>
           </div>
         </Section>

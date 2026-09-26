@@ -35,8 +35,10 @@ describe("recipe API", () => {
             roughNotes: "Use any bread.",
             ingredients: [{ label: " tomatoes ", amount: "a few" }],
             steps: [{ text: " Toast the bread. " }],
+            substitutionNotes: ["Any sturdy bread works."],
             tags: ["quick"],
           },
+          media: [{ dataUrl: "data:image/png;base64,aGVsbG8=", caption: "Toast" }],
         }),
       }),
     );
@@ -45,11 +47,18 @@ describe("recipe API", () => {
     const created = recipeResponseSchema.parse(await createResponse.json()).recipe;
     expect(created.title).toBe("Tomato toast");
     expect(created.versions[0].ingredients[0].label).toBe("tomatoes");
+    expect(created.versions[0].substitutionNotes).toEqual(["Any sturdy bread works."]);
+    expect(created.media[0].caption).toBe("Toast");
     expect(createResponse.headers.get("Location")).toBe(`/api/recipes/${created.id}`);
 
     const detailResponse = api.detail(created.id);
     expect(detailResponse.status).toBe(200);
     expect(recipeResponseSchema.parse(await detailResponse.json()).recipe).toEqual(created);
+
+    const mediaResponse = api.media(created.id, created.media[0].id);
+    expect(mediaResponse.status).toBe(200);
+    expect(mediaResponse.headers.get("Content-Type")).toBe("image/png");
+    expect(await mediaResponse.text()).toBe("hello");
   });
 
   test("reports invalid JSON", async () => {

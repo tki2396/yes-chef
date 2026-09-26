@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { CreateRecipeInput } from "@/shared/recipe-api";
-import type { Recipe, RecipeStatus, RecipeVersion, RecipeVisibility } from "@/types/recipe";
+import type { Recipe, RecipeMedia, RecipeStatus, RecipeVersion, RecipeVisibility } from "@/types/recipe";
 
 type RecipeRow = {
   id: string;
@@ -24,6 +24,7 @@ type VersionRow = {
   activeTime: string | null;
   passiveTime: string | null;
   servings: string | null;
+  substitutionNotes: string | null;
   outcomeNotes: string | null;
   rating: number | null;
   effortRating: number | null;
@@ -41,6 +42,12 @@ type StepRow = {
   position: number;
   instruction: string;
   duration: string | null;
+};
+
+type MediaRow = {
+  id: string;
+  storageKey: string;
+  caption: string | null;
 };
 
 export class RecipeRepository {
@@ -112,8 +119,8 @@ export class RecipeRepository {
         .query(`
           INSERT INTO recipe_versions (
             id, recipe_id, label, source, visibility, rough_notes, active_time,
-            passive_time, servings, outcome_notes, rating, effort_rating, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            passive_time, servings, substitution_notes, outcome_notes, rating, effort_rating, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .run(
           versionId,
@@ -125,6 +132,7 @@ export class RecipeRepository {
           version.activeTime ?? null,
           version.passiveTime ?? null,
           version.servings ?? null,
+          version.substitutionNotes?.length ? JSON.stringify(version.substitutionNotes) : null,
           version.outcomeNotes ?? null,
           version.rating ?? null,
           version.effortRating ?? null,
@@ -167,6 +175,16 @@ export class RecipeRepository {
           .query("INSERT OR IGNORE INTO recipe_version_tags (recipe_version_id, tag_id) VALUES (?, ?)")
           .run(versionId, tag!.id);
       }
+
+      for (const photo of input.media ?? []) {
+        this.db
+          .query(`
+            INSERT INTO recipe_media (
+              id, recipe_id, recipe_version_id, storage_key, media_type, caption, created_at
+            ) VALUES (?, ?, ?, ?, 'image', ?, ?)
+          `)
+          .run(crypto.randomUUID(), recipeId, versionId, photo.dataUrl, photo.caption ?? null, now);
+      }
     });
 
     insert.immediate();
@@ -175,6 +193,19 @@ export class RecipeRepository {
 
   count() {
     return this.db.query<{ count: number }, []>("SELECT count(*) AS count FROM recipes").get()!.count;
+  }
+
+  getMedia(recipeId: string, mediaId: string) {
+    return this.db
+      .query<MediaRow, [string, string, string]>(`
+        SELECT id, storage_key AS storageKey, caption
+        FROM recipe_media
+        WHERE id = ?
+          AND (recipe_id = ? OR recipe_version_id IN (
+            SELECT id FROM recipe_versions WHERE recipe_id = ?
+          ))
+      `)
+      .get(mediaId, recipeId, recipeId);
   }
 
   private hydrate(row: RecipeRow): Recipe {
@@ -192,6 +223,7 @@ export class RecipeRepository {
           active_time AS activeTime,
           passive_time AS passiveTime,
           servings,
+          substitution_notes AS substitutionNotes,
           outcome_notes AS outcomeNotes,
           rating,
           effort_rating AS effortRating
@@ -214,14 +246,16 @@ export class RecipeRepository {
       .all(row.id)
       .map(tag => tag.name);
 
-    const mediaCount = this.db
-      .query<{ count: number }, [string, string]>(`
-        SELECT count(*) AS count
+    const media = this.db
+      .query<Pick<MediaRow, "id" | "caption">, [string, string]>(`
+        SELECT id, caption
         FROM recipe_media
         WHERE recipe_id = ?
            OR recipe_version_id IN (SELECT id FROM recipe_versions WHERE recipe_id = ?)
+        ORDER BY created_at, id
       `)
-      .get(row.id, row.id)!.count;
+      .all(row.id, row.id)
+      .map(({ id, caption }): RecipeMedia => ({ id, caption: caption ?? undefined }));
 
     return {
       id: row.id,
@@ -232,7 +266,8 @@ export class RecipeRepository {
       tags,
       updatedAt: row.updatedAt,
       sourceLabel: row.sourceLabel ?? undefined,
-      mediaCount,
+      mediaCount: media.length,
+      media,
       versions,
     };
   }
@@ -282,9 +317,21 @@ export class RecipeRepository {
       servings: row.servings ?? undefined,
       ingredients,
       steps,
+      substitutionNotes: parseStringArray(row.substitutionNotes),
       outcomeNotes: row.outcomeNotes ?? undefined,
       rating: row.rating ?? undefined,
       effortRating: row.effortRating ?? undefined,
     };
+  }
+}
+
+function parseStringArray(value: string | null) {
+  if (!value) return undefined;
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every(item => typeof item === "string") ? parsed : undefined;
+  } catch {
+    return undefined;
   }
 }
