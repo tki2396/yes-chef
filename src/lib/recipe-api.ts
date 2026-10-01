@@ -1,10 +1,11 @@
 import {
-  apiErrorResponseSchema,
   createRecipeInputSchema,
   recipeListResponseSchema,
   recipeResponseSchema,
   type CreateRecipeInput,
 } from "@/shared/recipe-api";
+import { apiErrorResponseSchema } from "@/shared/api-errors";
+import { recipeImportResponseSchema, type RecipeImportResponse } from "@/shared/recipe-import-api";
 import type { Recipe } from "@/types/recipe";
 
 export class RecipeApiError extends Error {
@@ -52,4 +53,16 @@ export async function createRecipe(input: CreateRecipeInput): Promise<Recipe> {
     body: JSON.stringify(validatedInput),
   });
   return recipeResponseSchema.parse(body).recipe as Recipe;
+}
+
+export async function uploadRecipeScreenshot(file: File): Promise<RecipeImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const body = await request("/api/imports", {
+    method: "POST",
+    body: formData,
+  });
+
+  return recipeImportResponseSchema.parse(body) as RecipeImportResponse;
 }

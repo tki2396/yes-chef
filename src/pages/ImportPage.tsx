@@ -2,15 +2,19 @@ import { Clipboard, FileImage, Link, Mic } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { Button } from "@/components/ui/button";
+import UploadModal from "@/components/ui/upload-modal";
+import { appPath } from "@/lib/routing";
+import { useState } from "react";
 
 const importSources = [
-  { label: "Paste text", icon: Clipboard },
-  { label: "Recipe URL", icon: Link },
-  { label: "Photo or PDF", icon: FileImage },
-  { label: "Verbal notes", icon: Mic },
+  { id: "text", label: "Paste text", icon: Clipboard },
+  { id: "url", label: "Recipe URL", icon: Link },
+  { id: "image", label: "Photo or PDF", icon: FileImage },
+  { id: "voice", label: "Verbal notes", icon: Mic },
 ];
 
 export function ImportPage() {
+  const [uploadOpen, setUploadOpen] = useState(false);
   return (
     <>
       <PageHeader
@@ -25,7 +29,14 @@ export function ImportPage() {
               {importSources.map(source => {
                 const Icon = source.icon;
                 return (
-                  <button key={source.label} type="button" className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border bg-background p-3 text-sm font-medium">
+                  <button
+                    key={source.label}
+                    onClick={() => {
+                      if (source.id === "image") {
+                        setUploadOpen(true);
+                      }
+                    }}
+                    type="button" className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border bg-background p-3 text-sm font-medium">
                     <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
                     {source.label}
                   </button>
@@ -51,6 +62,11 @@ export function ImportPage() {
             </Button>
           </div>
         </Section>
+        <UploadModal
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onUploaded={draftId => window.location.assign(appPath(`/drafts/${draftId}`))}
+        />
       </div>
     </>
   );
