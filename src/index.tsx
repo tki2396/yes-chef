@@ -2,10 +2,13 @@ import { serve } from "bun";
 import index from "./index.html";
 import { getAppDatabase } from "./server/db/database";
 import { createRecipeApi } from "./server/api/recipes";
+import { recipeImportApi } from "./server/api/recipe-imports";
 import { RecipeRepository } from "./server/repositories/recipes";
+import { RecipeImportRepository } from "./server/repositories/recipe-imports-repository";
 
 const database = getAppDatabase({ seedNewDatabase: process.env.NODE_ENV !== "production" });
 const recipeApi = createRecipeApi(new RecipeRepository(database));
+const recipeImportApiHandlers = recipeImportApi(new RecipeImportRepository(database));
 const developmentIndex = index;
 
 async function productionAsset(request: Request): Promise<Response> {
@@ -43,6 +46,10 @@ const server = serve({
 
     "/api/recipes/:id/media/:mediaId": {
       GET: request => recipeApi.media(request.params.id, request.params.mediaId),
+    },
+
+    "/api/imports": {
+      POST: request => recipeImportApiHandlers.upload(request),
     },
 
     // Development serves the HTML entrypoint directly. Production serves the

@@ -9,6 +9,7 @@ const completedWork = [
   "Private-first recipe model with versions, ingredients, steps, tags, media, and imports",
   "Local SQLite database with migrations, seed data, repository tests, and a recipe API",
   "Full private recipe logging with flexible times, servings, ingredients, instructions, tags, ratings, photos, substitutions, and version notes",
+  "Private recipe screenshot uploads saved to durable local storage with draft records",
   "GitHub Pages navigation fixes, local Pages preview, and Bun 1.4.2 upgrade",
 ];
 
@@ -20,15 +21,15 @@ const buildOrder = [
     label: "Done",
   },
   {
+    title: "Build photo/screenshot import and draft review",
+    description:
+      "Screenshot upload and local storage work. Next, extract the visible recipe, show the original beside editable fields, and allow incomplete saves when parsing is uncertain.",
+    label: "Current",
+  },
+  {
     title: "Make the Library easier to use",
     description: "Add search and filters for tags, recent recipes, favorites, and recipes that need review.",
     label: "Next",
-  },
-  {
-    title: "Build photo/screenshot import and draft review",
-    description:
-      "Upload or paste an image, extract the visible recipe, keep the original beside an editable draft, and allow incomplete saves when parsing is uncertain.",
-    label: "Planned",
   },
   {
     title: "Harden the main flows",
@@ -52,39 +53,39 @@ export function HomePage() {
         kicker="Project tracker"
         title="Today"
         description="A plain-language snapshot of what works, what comes next, and what we are intentionally saving for later. Update this page whenever a piece of work is merged."
-        action={{ label: "Open current feature", href: appPath("/recipes") }}
+        action={{ label: "Open current feature", href: appPath("/import") }}
       />
 
       <div className="grid gap-4">
         <Section
           title="Current milestone"
-          description="The private recipe core is usable. The next milestone is making a growing library quick to navigate."
+          description="The private recipe core is usable. Screenshot import now has durable capture; extraction and review come next."
         >
           <div className="rounded-lg border bg-background p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-primary-foreground">
                 Next up
               </span>
-              <span className="text-xs font-medium text-muted-foreground">Core workflow complete</span>
+              <span className="text-xs font-medium text-muted-foreground">Import foundation in progress</span>
             </div>
-            <h2 className="mt-4 text-xl font-semibold">Make the Library easier to use</h2>
+            <h2 className="mt-4 text-xl font-semibold">Finish screenshot import and review</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              A cook can now save a full recipe or just the fragments they remember. Next, add search and filters so recipes,
-              favorites, recent work, and notes needing review stay easy to find.
+              A cook can now upload a recipe screenshot into a private draft without losing the original. Next, turn the image
+              into editable recipe fields and make uncertain results obvious before anything enters the library.
             </p>
             <a
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold underline-offset-4 hover:underline"
-              href={appPath("/recipes")}
+              href={appPath("/import")}
             >
-              Open the recipe library
+              Open recipe import
               <ArrowRight aria-hidden="true" className="size-4" />
             </a>
           </div>
           <div className="mt-3 rounded-lg bg-muted/60 p-4 text-sm leading-6">
             <p className="font-semibold">Where it works today</p>
             <p className="mt-1 text-muted-foreground">
-              The local app can save flexible recipe details and attached photos in SQLite. GitHub Pages is a static preview
-              for the interface and this tracker; it cannot run the recipe server or database.
+              The local app and Hetzner deployment can save screenshots through the API into durable local storage. GitHub
+              Pages remains a static interface preview and cannot run the upload server, filesystem storage, or SQLite.
             </p>
           </div>
         </Section>

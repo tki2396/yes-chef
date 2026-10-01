@@ -117,29 +117,6 @@ export const createRecipeInputSchema = z.object({
 export const recipeResponseSchema = z.object({ recipe: recipeSchema });
 export const recipeListResponseSchema = z.object({ recipes: z.array(recipeSchema) });
 
-export const apiErrorCodeSchema = z.enum([
-  "invalid_json",
-  "validation_failed",
-  "recipe_not_found",
-  "internal_error",
-]);
-
-export const apiErrorResponseSchema = z.object({
-  error: z.object({
-    code: apiErrorCodeSchema,
-    message: z.string(),
-    issues: z
-      .array(
-        z.object({
-          path: z.array(z.union([z.string(), z.number()])),
-          message: z.string(),
-        }),
-      )
-      .optional(),
-  }),
-});
-
 export type CreateRecipeInput = z.infer<typeof createRecipeInputSchema>;
 export type RecipeResponse = z.infer<typeof recipeResponseSchema>;
 export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
-export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>;

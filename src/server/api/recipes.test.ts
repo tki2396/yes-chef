@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "bun:sqlite";
-import { apiErrorResponseSchema, recipeListResponseSchema, recipeResponseSchema } from "@/shared/recipe-api";
+import { apiErrorResponseSchema } from "@/shared/api-errors";
+import { recipeListResponseSchema, recipeResponseSchema } from "@/shared/recipe-api";
 import { openDatabase } from "@/server/db/database";
 import { RecipeRepository } from "@/server/repositories/recipes";
 import { createRecipeApi } from "./recipes";

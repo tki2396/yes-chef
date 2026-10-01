@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { Button } from "@/components/ui/button";
 import UploadModal from "@/components/ui/upload-modal";
+import { appPath } from "@/lib/routing";
 import { useState } from "react";
 
 const importSources = [
@@ -61,10 +62,11 @@ export function ImportPage() {
             </Button>
           </div>
         </Section>
-        <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onUploaded={(draftId) => {
-          console.log("Uploaded draft ID:", draftId);
-          setUploadOpen(false);
-        }} />
+        <UploadModal
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onUploaded={draftId => window.location.assign(appPath(`/drafts/${draftId}`))}
+        />
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 import { FileImage, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { uploadRecipeScreenshot } from "@/lib/recipe-api";
 
 type UploadModalProps = {
   open: boolean;
@@ -13,10 +14,51 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function UploadModal({ open, onClose }: UploadModalProps) {
+export default function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function close() {
+    if (isUploading) return;
+    setFile(null);
+    setError(undefined);
+    onClose();
+  }
+
+  function selectFile(nextFile: File | undefined) {
+    setError(undefined);
+    if (!nextFile) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(nextFile.type)) {
+      setFile(null);
+      setError("Choose a PNG, JPEG, or WebP image.");
+      return;
+    }
+    if (nextFile.size > 5 * 1024 * 1024) {
+      setFile(null);
+      setError("Choose an image that is 5 MB or smaller.");
+      return;
+    }
+    setFile(nextFile);
+  }
+
+  async function upload() {
+    if (!file) return;
+    setIsUploading(true);
+    setError(undefined);
+
+    try {
+      const result = await uploadRecipeScreenshot(file);
+      setFile(null);
+      onUploaded(result.importId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to upload the screenshot.");
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   useEffect(() => {
     if (!file) {
@@ -33,12 +75,12 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
     if (!open) return;
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !isUploading) close();
     }
 
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [open, onClose]);
+  }, [open, isUploading]);
 
   if (!open) return null;
 
@@ -46,7 +88,7 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
       onMouseDown={event => {
-        if (event.currentTarget === event.target) onClose();
+        if (event.currentTarget === event.target) close();
       }}
     >
       <div
@@ -70,7 +112,7 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
               </p>
             </div>
           </div>
-          <Button type="button" variant="ghost" size="icon" className="-mr-2 -mt-1 shrink-0" onClick={onClose}>
+          <Button type="button" variant="ghost" size="icon" className="-mr-2 -mt-1 shrink-0" onClick={close} disabled={isUploading}>
             <X aria-hidden="true" />
             <span className="sr-only">Close upload dialog</span>
           </Button>
@@ -86,7 +128,7 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
                   <p className="truncate text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+                <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={isUploading}>
                   Replace
                 </Button>
               </div>
@@ -112,17 +154,21 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
             className="sr-only"
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={event => setFile(event.target.files?.[0] ?? null)}
+            onChange={event => {
+              selectFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
           />
+          {error ? <p role="alert" className="text-sm font-medium text-destructive">{error}</p> : null}
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t bg-muted/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={close} disabled={isUploading}>
             Cancel
           </Button>
-          <Button type="button" disabled={!file}>
+          <Button type="button" disabled={!file || isUploading} onClick={upload}>
             <Upload aria-hidden="true" />
-            Upload screenshot
+            {isUploading ? "Uploading…" : "Upload screenshot"}
           </Button>
         </div>
       </div>

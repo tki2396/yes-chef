@@ -1,23 +1,10 @@
 import {
   createRecipeInputSchema,
-  type ApiErrorResponse,
   type RecipeListResponse,
   type RecipeResponse,
 } from "@/shared/recipe-api";
 import type { RecipeRepository } from "@/server/repositories/recipes";
-
-function json<T>(body: T, init?: ResponseInit) {
-  return Response.json(body, init);
-}
-
-function apiError(
-  status: number,
-  code: ApiErrorResponse["error"]["code"],
-  message: string,
-  issues?: ApiErrorResponse["error"]["issues"],
-) {
-  return json<ApiErrorResponse>({ error: { code, message, ...(issues ? { issues } : {}) } }, { status });
-}
+import { apiError, json } from "./http";
 
 export function createRecipeApi(repository: RecipeRepository) {
   return {

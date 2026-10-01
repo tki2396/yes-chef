@@ -5,6 +5,7 @@ services:
     image: ${YES_CHEF_IMAGE:?Set YES_CHEF_IMAGE to the published image tag}
     environment:
       YES_CHEF_DB_PATH: /app/data/yes-chef.sqlite
+      YES_CHEF_UPLOAD_DIR: /app/data/uploads
     expose:
       - "8080"
     volumes:
